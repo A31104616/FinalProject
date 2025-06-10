@@ -5,3 +5,14 @@
     </NuxtLayout>
   </div>
 </template>
+
+<style>
+@import '@fortawesome/fontawesome-free/css/all.css';
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+</style>

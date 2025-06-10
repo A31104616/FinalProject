@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // 允許讀取所有文件
+      allow read: if true;
+      
+      // 允許上傳圖片文件
+      allow write: if request.resource.contentType.matches('image/.*');
+    }
+    
+    // 繪圖文件夾的規則
+    match /draw/{fileName} {
+      allow write: if request.resource.contentType.matches('image/.*');
+    }
+    
+    // 攝影文件夾的規則
+    match /photo/{fileName} {
+      allow write: if request.resource.contentType.matches('image/.*');
+    }
+  }
+}

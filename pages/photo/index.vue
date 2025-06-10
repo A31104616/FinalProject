@@ -1,25 +1,20 @@
 <template>
-  <div>
-    <h1>{{ displayTitle }}</h1>
-    <div class="search-container">      <input 
-        v-model="searchQuery" 
-        type="text" 
-        placeholder="搜尋標籤..."
-        class="search-input"
-        @keyup.enter="handleSearch"
-      >
-      <button @click="handleSearch" class="search-button">搜尋</button>
-      <button @click="clearSearch" class="clear-button">清空</button>
+  <div>    <div class="page-header">
+      <button v-if="currentSearch" @click="clearSearch" class="clear-button">
+        <span class="button-text">攝影</span>
+      </button>
+      <h1>{{ displayTitle }}</h1>
     </div>
     <div class="pic-list">
       <div 
         class="pic-card" 
         v-for="item in filteredDraw" 
         :key="item.id"
-        @click="navigateToDetail(item)">
+        @click="navigateToDetail(item)"
+      >
         <img :src="item.path" :alt="item.id" class="preview-image">
         <div class="card-content">
-          <p>{{ item.date }}</p>
+          <h3>{{ item.place.join(' ') }}</h3>
           <div class="tags-container">
             <span 
               v-for="tag in item.tags" 
@@ -35,64 +30,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { photoData } from '~/data/drawData'
 
-// 將物件轉換為陣列並格式化日期
 const draw = Object.values(photoData).map(item => ({
   ...item,
-  date: item.date.split('/').join('-') // 轉換日期格式為 YYYY-MM-DD
+  date: item.date.split('/').join('-')
 }))
 
 const route = useRoute()
-const searchQuery = ref('')
+const router = useRouter()
 const currentSearch = ref('')
 
-// 在組件掛載時檢查 URL 參數
-onMounted(() => {
-  if (route.query.search) {
-    currentSearch.value = route.query.search as string
+// 監視 URL 參數變化
+watch(() => route.query.search, (newSearch) => {
+  if (newSearch) {
+    currentSearch.value = newSearch as string
+  } else {
+    currentSearch.value = ''
   }
-})
+}, { immediate: true })
 
-const displayTitle = computed(() => currentSearch.value || '繪圖')
+const displayTitle = computed(() => currentSearch.value ? `${currentSearch.value}` : '攝影')
 
-// 處理搜尋
-const handleSearch = () => {
-  currentSearch.value = searchQuery.value
-  searchQuery.value = ''
+// 清空搜尋並返回首頁
+const clearSearch = (): void => {
+  router.push('/photo')
 }
 
 // 處理標籤點擊
 const searchTag = (tag: string): void => {
-  currentSearch.value = tag
-}
-
-// 清空搜尋
-const clearSearch = (): void => {
-  searchQuery.value = ''
-  currentSearch.value = ''
+  router.push({ query: { search: tag } })
 }
 
 // 導航到詳情頁
-const router = useRouter()
 const navigateToDetail = (item: any): void => {
   router.push(`/photo/${item.id}`)
 }
 
-// 用computed屬性對圖片進行過濾和排序
+// 過濾和排序圖片
 const filteredDraw = computed(() => {
   let filtered = [...draw]
   
-  // 如果有搜尋條件，過濾包含該標籤的圖片
   if (currentSearch.value) {
     const query = currentSearch.value.toLowerCase()
     filtered = filtered.filter(item => 
-      item.tags.some(tag => tag.toLowerCase().includes(query))
+      item.tags.some(tag => tag.toLowerCase().includes(query)) ||
+      item.place.some(place => place.toLowerCase().includes(query))
     )
   }
-    // 按日期排序
+    
   return filtered.sort((a, b) => {
     const dateA = new Date(a.date).getTime()
     const dateB = new Date(b.date).getTime()
@@ -102,6 +90,39 @@ const filteredDraw = computed(() => {
 </script>
 
 <style scoped>
+.page-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 2em;
+}
+
+.clear-button {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button-text {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.clear-button:hover {
+  background-color: #2980b9;
+}
+
 .pic-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -144,53 +165,6 @@ const filteredDraw = computed(() => {
   margin: 0 0 10px 0;
   font-size: 1.1em;
   line-height: 1.4;
-}
-
-.pic-card p {
-  margin: 5px 0;
-}
-
-.search-container {
-  display: flex;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.search-input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-.search-button {
-  padding: 8px 16px;
-  background-color: #27ae60;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.search-button:hover {
-  background-color: #219a52;
-}
-
-.clear-button {
-  padding: 8px 16px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s;
-}
-
-.clear-button:hover {
-  background-color: #c0392b;
 }
 
 .tags-container {
