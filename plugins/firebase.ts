@@ -37,8 +37,6 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const auth = getAuth(app)
   console.log('Auth initialized successfully')
-
-  nuxtApp.provide('firebase', { app, db, storage })
   // Nuxt plugin
   return {
     provide: {
