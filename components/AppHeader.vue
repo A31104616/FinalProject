@@ -119,7 +119,7 @@ const handleSearch = () => {
 
 .search-input {
   flex: 1;
-  padding: 8px 40px 8px 12px;
+  padding: 8px 20px 8px 12px;
   border: none;
   background-color: transparent;
   color: white;

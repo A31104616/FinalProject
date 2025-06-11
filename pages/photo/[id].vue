@@ -12,6 +12,7 @@
               class="like-button" 
               @click="handleLike"
               :disabled="isLiking"
+              :class="{ 'liked': isLiked }"
             >
               <span v-if="isLiking">更新中...</span>
               <span v-else>
@@ -67,6 +68,7 @@ import { useFirestore, type FirestoreDocument } from '~/composables/useFirestore
 
 interface PhotoDocument extends FirestoreDocument {
   place: string[];
+  artist: string;
   model: string;
   tags: string[];
   status: string;
@@ -113,18 +115,56 @@ onMounted(async () => {
 })
 
 // 處理點讚
+// ...existing imports...
+
+// Add this interface
+interface LikeData {
+  like: number;
+  isLiked: boolean;
+}
+
+// ...existing interface and setup code...
+
+onMounted(async () => {
+  try {
+    // Get Firestore data first for like count
+    const firestoreData = await getDocument<PhotoDocument>('photos', route.params.id as string)
+    
+    if (localphoto.value) {
+      picture.value = {
+        ...localphoto.value,
+        like: firestoreData?.like || 0,
+        id: route.params.id as string
+      } as PhotoDocument
+    } else if (firestoreData) {
+      picture.value = firestoreData
+    }
+
+    // Set initial like count and state
+    if (firestoreData) {
+      likeCount.value = firestoreData.like
+      isLiked.value = false // Reset like state
+    }
+  } catch (error) {
+    console.error('獲取圖片數據失敗:', error)
+  }
+})
+
+// Update handleLike function to toggle like
 async function handleLike() {
   if (!picture.value || isLiking.value) return
   
   isLiking.value = true
   try {
-    const newLikeCount = likeCount.value + 1
-    await updateDocument('photos', picture.value.id, { like: newLikeCount })
+    const newLikeCount = isLiked.value ? likeCount.value - 1 : likeCount.value + 1
+    await updateDocument('photos', picture.value.id, { 
+      like: newLikeCount
+    })
     likeCount.value = newLikeCount
-    isLiked.value = true
+    isLiked.value = !isLiked.value // Toggle like state
   } catch (error) {
     console.error('點讚失敗:', error)
-    alert('點讚失敗，請稍後再試')
+    alert('操作失敗，請稍後再試')
   } finally {
     isLiking.value = false
   }
@@ -194,6 +234,15 @@ function navigateToTag(tag: string) {
   cursor: pointer;
   transition: all 0.3s ease;
   min-width: 80px;
+}
+
+.like-button.liked {
+  background-color: #ff4081;
+  color: white;
+}
+
+.like-button.liked:hover {
+  background-color: #ff1744;
 }
 
 .like-button:hover:not(:disabled) {

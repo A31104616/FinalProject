@@ -13,6 +13,7 @@
               class="like-button" 
               @click="handleLike"
               :disabled="isLiking"
+              :class="{ 'liked': isLiked }"
             >
               <span v-if="isLiking">更新中...</span>
               <span v-else>
@@ -106,18 +107,51 @@ onMounted(async () => {
 })
 
 // 處理點讚
+interface LikeData {
+  like: number;
+  isLiked: boolean;
+}
+
+onMounted(async () => {
+  try {
+    // Get Firestore data first for like count
+    const firestoreData = await getDocument<DrawDocument>('drawings', route.params.id as string)
+    
+    if (localpicture.value) {
+      picture.value = {
+        ...localpicture.value,
+        like: firestoreData?.like || 0,
+        id: route.params.id as string
+      } as DrawDocument
+    } else if (firestoreData) {
+      picture.value = firestoreData
+    }
+
+    // Set initial like count and state
+    if (firestoreData) {
+      likeCount.value = firestoreData.like
+      isLiked.value = false // Reset like state
+    }
+  } catch (error) {
+    console.error('獲取圖片數據失敗:', error)
+  }
+})
+
+// Update handleLike function to toggle like
 async function handleLike() {
   if (!picture.value || isLiking.value) return
   
   isLiking.value = true
   try {
-    const newLikeCount = likeCount.value + 1
-    await updateDocument('drawings', picture.value.id, { like: newLikeCount })
+    const newLikeCount = isLiked.value ? likeCount.value - 1 : likeCount.value + 1
+    await updateDocument('drawings', picture.value.id, { 
+      like: newLikeCount
+    })
     likeCount.value = newLikeCount
-    isLiked.value = true
+    isLiked.value = !isLiked.value // Toggle like state
   } catch (error) {
     console.error('點讚失敗:', error)
-    alert('點讚失敗，請稍後再試')
+    alert('操作失敗，請稍後再試')
   } finally {
     isLiking.value = false
   }
@@ -192,6 +226,15 @@ function navigateToTag(tag: string) {
 .like-button:hover:not(:disabled) {
   background-color: #ff4081;
   color: white;
+}
+
+.like-button.liked {
+  background-color: #ff4081;
+  color: white;
+}
+
+.like-button.liked:hover {
+  background-color: #ff1744;
 }
 
 .like-button:disabled {
