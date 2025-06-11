@@ -1,23 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 允許讀取所有文檔
+    // 繪圖集合規則
+    match /drawings/{drawingId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['like']);
+    }
+    
+    // 攝影集合規則
+    match /photos/{photoId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['like']);
+    }
+    
+    // 其他集合的默認規則
     match /{document=**} {
       allow read: if true;
-    }
-    
-    // 繪圖集合的規則
-    match /drawings/{drawingId} {
-      allow write: if true;
-      // 如果需要驗證，可以添加以下規則：
-      // allow write: if request.auth != null;
-    }
-    
-    // 攝影集合的規則
-    match /photos/{photoId} {
-      allow write: if true;
-      // 如果需要驗證，可以添加以下規則：
-      // allow write: if request.auth != null;
+      allow write: if false;
     }
   }
 }

@@ -4,34 +4,49 @@ import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getAuth } from 'firebase/auth'
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyD_xXc6ZvM9Eb-tNjSOPkb4igQCS5FpMh8",
-  authDomain: "artphotogallery-d7552.firebaseapp.com",
-  projectId: "artphotogallery-d7552",
-  storageBucket: "artphotogallery-d7552.appspot.com",
-  messagingSenderId: "951224899842",
-  appId: "1:951224899842:web:3d335c4d7d0a3ab41e7dcc"
-}
+// 初始化 Firebase 並導出服務
+export default defineNuxtPlugin((nuxtApp) => {
+  const config = useRuntimeConfig()
+  console.log('Nuxt Runtime Config loaded')
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: config.public.firebase.apiKey,
+    authDomain: config.public.firebase.authDomain,
+    projectId: config.public.firebase.projectId,
+    storageBucket: config.public.firebase.storageBucket,
+    messagingSenderId: config.public.firebase.messagingSenderId,
+    appId: config.public.firebase.appId
+  }
 
-// Initialize Firestore
-export const db = getFirestore(app)
+  console.log('Initializing Firebase with config:', {
+    ...firebaseConfig,
+    apiKey: '[HIDDEN]'
+  })
 
-// Initialize Storage
-export const storage = getStorage(app)
+  // 初始化 Firebase
+  const app = initializeApp(firebaseConfig)
+  console.log('Firebase initialized successfully')
 
-// Initialize Auth
-export const auth = getAuth(app)
+  // 初始化並導出服務
+  const db = getFirestore(app)
+  console.log('Firestore initialized successfully')
 
-export default defineNuxtPlugin(() => {
+  const storage = getStorage(app)
+  console.log('Storage initialized successfully')
+
+  const auth = getAuth(app)
+  console.log('Auth initialized successfully')
+
+  // Nuxt plugin
   return {
     provide: {
-      db,
-      storage,
-      auth
+      firebase: {
+        app,
+        db,
+        storage,
+        auth
+      }
     }
   }
 })

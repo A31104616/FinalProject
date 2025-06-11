@@ -74,6 +74,16 @@
           </div>
         </div>
 
+        <div v-if="uploading" class="upload-progress">
+          <div class="progress-bar">
+            <div 
+              class="progress-fill"
+              :style="{ width: `${uploadProgress}%` }"
+            ></div>
+          </div>
+          <div class="progress-text">{{ Math.round(uploadProgress) }}%</div>
+        </div>
+
         <button 
           @click="handleUpload" 
           class="upload-button"
@@ -90,17 +100,16 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStorage } from '~/composables/useStorage'
-import { useFirestore } from '~/composables/useFirestore'
 
 const router = useRouter()
-const { uploadFile } = useStorage()
-const { addDocument } = useFirestore()
+const { uploadFileWithMetadata } = useStorage()
 
 const category = ref('draw')
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
 const uploading = ref(false)
+const uploadProgress = ref(0)
 
 const drawForm = reactive({
   name: '',
@@ -136,65 +145,84 @@ const getCurrentDate = () => {
 }
 
 const handleUpload = async () => {
-  if (!selectedFile.value) return
+  if (!selectedFile.value) {
+    alert('請選擇檔案')
+    return
+  }
 
   try {
     uploading.value = true
-    console.log('開始上傳流程...')
+    uploadProgress.value = 0
     
-    // 生成一個唯一的 ID（使用時間戳和隨機數）
-    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    console.log('生成的文檔 ID:', id)
-    
-    // 上傳圖片到 Storage
-    const storagePath = `${category.value}/${id}-${selectedFile.value.name}`
-    console.log('準備上傳到 Storage 路徑:', storagePath)
-    
-    const imageUrl = await uploadFile(storagePath, selectedFile.value)
-    console.log('Storage 上傳結果 URL:', imageUrl)
-    
-    if (!imageUrl) throw new Error('上傳圖片失敗')
-
-    // 準備要存入 Firestore 的數據
-    const currentDate = getCurrentDate()
-    console.log('準備存入 Firestore...')
-    
+    // 驗證必填欄位
     if (category.value === 'draw') {
-      const drawData = {
-        name: drawForm.name,
-        path: imageUrl,
-        date: currentDate,
-        model: '繪圖',
-        artist: drawForm.artist,
-        like: 0,
-        tags: drawForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        status: drawForm.status
-      }
-      console.log('繪圖數據:', drawData)
-      const docId = await addDocument('drawings', drawData, id)
-      console.log('Firestore 文檔已創建，ID:', docId)
-      router.push('/draw')
+      if (!drawForm.name?.trim()) throw new Error('請填寫作品名稱')
+      if (!drawForm.artist?.trim()) throw new Error('請填寫作者名稱')
     } else {
-      const photoData = {
-        place: photoForm.place.split(',').map(place => place.trim()).filter(Boolean),
-        path: imageUrl,
-        date: currentDate,
-        model: '攝影',
-        artist: 'Sonatiya',
-        like: 0,
-        tags: photoForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        status: photoForm.status
-      }
-      console.log('攝影數據:', photoData)
-      const docId = await addDocument('photos', photoData, id)
-      console.log('Firestore 文檔已創建，ID:', docId)
-      router.push('/photo')
+      if (!photoForm.place?.trim()) throw new Error('請填寫拍攝地點')
     }
-  } catch (error) {
-    console.error('上傳失敗，詳細錯誤:', error)
-    alert('上傳失敗，請檢查控制台查看詳細錯誤訊息')
+
+    // 生成唯一ID
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 15)
+    const id = `${timestamp}-${random}`
+
+    // 準備檔案路徑
+    const fileExt = selectedFile.value.name.split('.').pop() || 'png'
+    const fileName = `${id}.${fileExt}`
+    const storagePath = `${category.value}/${fileName}`
+
+    // 準備元數據
+    // const currentDate = getCurrentDate()
+    // const baseMetadata = {
+    //   id,
+    //   date: currentDate,
+    //   createdAt: new Date(),
+    //   like: 0
+    // }
+    const metadata = category.value === 'draw' 
+      ? {
+          name: drawForm.name,
+          artist: drawForm.artist,
+          model: '繪圖',
+          status: drawForm.status,
+          tags: drawForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+          like: 0,
+          date: new Date().toISOString(),
+          createdAt: new Date()
+        }
+      : {
+          name: photoForm.place,
+          model: '攝影',
+          status: photoForm.status,
+          place: photoForm.place.split(',').map(place => place.trim()).filter(Boolean),
+          like: 0,
+          date: new Date().toISOString(),
+          createdAt: new Date()
+        }
+
+    // 上傳文件和元數據
+    const collectionName = category.value === 'draw' ? 'drawings' : 'photos'
+    const result = await uploadFileWithMetadata(
+      selectedFile.value,
+      storagePath,
+      collectionName,
+      // category.value === 'draw' ? 'drawings' : 'photos',
+      metadata
+    )
+
+    if (!result?.success) {
+      throw new Error('上傳失敗')
+    }
+
+    // 上傳成功，跳轉到作品頁面
+    router.push(`/${category.value}/${id}`)
+  } catch (error: any) {
+    console.error('上傳失敗:', error)
+    alert(error.message || '上傳失敗，請稍後再試')
   } finally {
     uploading.value = false
+    uploadProgress.value = 0
   }
 }
 </script>
@@ -321,5 +349,30 @@ const handleUpload = async () => {
 .upload-button:disabled {
   background-color: #95a5a6;
   cursor: not-allowed;
+}
+
+.upload-progress {
+  margin-bottom: 15px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #3498db;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  margin-top: 5px;
+  color: #666;
+  font-size: 14px;
 }
 </style>

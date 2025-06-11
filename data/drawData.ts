@@ -1,3 +1,6 @@
+import { collection, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore'
+import { useNuxtApp } from '#app'
+
 interface DrawItem {
   id: string;
   name: string;
@@ -10,7 +13,7 @@ interface DrawItem {
   status?: string;
 }
 
-interface photoItem {
+interface PhotoItem {
   id: string;
   place: string[];
   path: string;
@@ -22,6 +25,49 @@ interface photoItem {
   status?: string;
 }
 
+// 從 Firestore 獲取點讚數
+async function getLikeCount(collectionName: string, id: string): Promise<number> {
+  const { $firebase } = useNuxtApp()
+  try {
+    const docRef = doc($firebase.db, collectionName, id)
+    const docSnap = await getDoc(docRef)
+    
+    if (docSnap.exists()) {
+      return docSnap.data().like || 0
+    }
+    
+    // 如果文檔不存在，創建它
+    const initialData = {
+      like: 0,
+      id: id
+    }
+    await setDoc(docRef, initialData)
+    return 0
+  } catch (error) {
+    console.error(`獲取點讚數時發生錯誤 (${collectionName}/${id}):`, error)
+    return 0
+  }
+}
+
+// 更新點讚數
+export async function updateLikeCount(collectionName: string, id: string): Promise<number> {
+  const { $firebase } = useNuxtApp()
+  try {
+    const docRef = doc($firebase.db, collectionName, id)
+    await updateDoc(docRef, {
+      like: increment(1)
+    })
+    
+    // 獲取更新後的數據
+    const updatedDoc = await getDoc(docRef)
+    return updatedDoc.data()?.like || 0
+  } catch (error) {
+    console.error(`更新點讚數時發生錯誤 (${collectionName}/${id}):`, error)
+    throw error
+  }
+}
+
+// 初始化數據
 export const drawData: { [key: string]: DrawItem } = {
     'draw': {
     id: 'draw',
@@ -179,7 +225,7 @@ export const drawData: { [key: string]: DrawItem } = {
     }
 }
 
-export const photoData: { [key: string]: photoItem } = {
+export const photoData: { [key: string]: PhotoItem } = {
     'P_20240214_164812': {
         id: 'P_20240214_164812',
         place: ['宜蘭', '頭城', '外澳'],
@@ -290,4 +336,63 @@ export const photoData: { [key: string]: photoItem } = {
         tags: ['animal', 'bird'],
         status: '亞成鳥夜鷺'
     }
+}
+
+// 初始化所有數據的點讚數
+export async function initializeLikeCounts() {
+  try {
+    // 初始化繪圖數據的點讚數
+    for (const id of Object.keys(drawData)) {
+      const likes = await getLikeCount('drawings', id)
+      drawData[id].like = likes
+    }
+    
+    // 初始化攝影數據的點讚數
+    for (const id of Object.keys(photoData)) {
+      const likes = await getLikeCount('photos', id)
+      photoData[id].like = likes
+    }
+    
+    console.log('點讚數初始化完成')
+  } catch (error) {
+    console.error('初始化點讚數時發生錯誤:', error)
+  }
+}
+
+// 更新特定項目的點讚數
+export async function updateItemLike(type: 'drawings' | 'photos', id: string): Promise<number> {
+  try {
+    const newCount = await updateLikeCount(type, id)
+    
+    // 更新本地數據
+    if (type === 'drawings' && drawData[id]) {
+      drawData[id].like = newCount
+    } else if (type === 'photos' && photoData[id]) {
+      photoData[id].like = newCount
+    }
+    
+    return newCount
+  } catch (error) {
+    console.error(`更新項目點讚數時發生錯誤 (${type}/${id}):`, error)
+    throw error
+  }
+}
+
+// 獲取特定項目的點讚數
+export async function getItemLike(type: 'drawings' | 'photos', id: string): Promise<number> {
+  try {
+    const count = await getLikeCount(type, id)
+    
+    // 更新本地數據
+    if (type === 'drawings' && drawData[id]) {
+      drawData[id].like = count
+    } else if (type === 'photos' && photoData[id]) {
+      photoData[id].like = count
+    }
+    
+    return count
+  } catch (error) {
+    console.error(`獲取項目點讚數時發生錯誤 (${type}/${id}):`, error)
+    throw error
+  }
 }

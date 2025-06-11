@@ -6,6 +6,16 @@
   </div>
 </template>
 
+<script setup>
+import { onMounted } from 'vue'
+import { initializeLikeCounts } from '~/data/drawData'
+
+// 在應用啟動時初始化點讚數
+onMounted(async () => {
+  await initializeLikeCounts()
+})
+</script>
+
 <style>
 @import '@fortawesome/fontawesome-free/css/all.css';
 

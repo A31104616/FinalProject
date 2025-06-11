@@ -1,40 +1,46 @@
 <!-- pages/equipment/[id].vue -->
 <template>
-  <div>    <div v-if="picture" class="detail">
-        <div class="detail-grid">
-          <div class="image-region">
-            <img :src="picture.path" class="responsive-image">
-          </div>          <div class="info-section">
-            <div class="header-section">
-              <h2><strong>{{ picture.name }}</strong></h2>
-              <button class="like-button" @click="toggleLike">
-                <span v-if="isLiked">★</span>
-                <span v-else>☆</span>
-              </button>
-            </div>
-            
-            <p class="info-item"><strong>類型 </strong><span>{{ picture.model }}</span></p>
-            <p class="info-item"><strong>作者 </strong><span>{{ picture.artist }}</span></p>
-            <p class="info-item"><strong>日期 </strong><span>{{ picture.date }}</span></p>
-            <p class="info-item"><strong>標籤 </strong>
-              <span class="tags-container">
-                <span 
-                  v-for="tag in picture.tags" 
-                  :key="tag" 
-                  class="tag"
-                  @click="navigateToTag(tag)"
-                  style="cursor: pointer;"
-                >{{ tag }}</span>
+  <div>
+    <div v-if="picture" class="detail">
+      <div class="detail-grid">
+        <div class="image-region">
+          <img :src="picture.path" class="responsive-image">
+        </div>
+        <div class="info-section">
+          <div class="header-section">
+            <h2><strong>{{ picture.name }}</strong></h2>
+            <button 
+              class="like-button" 
+              @click="handleLike"
+              :disabled="isLiking"
+            >
+              <span v-if="isLiking">更新中...</span>
+              <span v-else>
+                <span class="like-icon">{{ isLiked ? '★' : '☆' }}</span>
+                <span class="like-count">{{ likeCount }}</span>
               </span>
-            </p>
-            <p class="info-item"><strong>讚 </strong><span>{{ picture.like }}</span></p>
-            <p class="info-item status-title"><strong>作品介紹 </strong></p>
-            <div class="status-region">
-              <span :class="statusClass">{{ picture.status }}</span>
-            </div>
+            </button>
           </div>
-      </div>
 
+          <p class="info-item"><strong>類型 </strong><span>{{ picture.model }}</span></p>
+          <p class="info-item"><strong>作者 </strong><span>{{ picture.artist }}</span></p>
+          <p class="info-item"><strong>日期 </strong><span>{{ picture.date }}</span></p>
+          <p class="info-item"><strong>標籤 </strong>
+            <span class="tags-container">
+              <span 
+                v-for="tag in picture.tags" 
+                :key="tag" 
+                class="tag"
+                @click="navigateToTag(tag)"
+              >{{ tag }}</span>
+            </span>
+          </p>
+          <p class="info-item status-title"><strong>作品介紹 </strong></p>
+          <div class="status-region">
+            <span class="status-text">{{ picture.status }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-else class="not-found">
@@ -45,113 +51,124 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { drawData } from '~/data/drawData'
+import { useFirestore, type FirestoreDocument } from '~/composables/useFirestore'
+
+interface DrawDocument extends FirestoreDocument {
+  name: string;
+  artist: string;
+  model: string;
+  tags: string[];
+  status: string;
+}
 
 const route = useRoute()
 const router = useRouter()
+const { getDocument, updateDocument } = useFirestore()
 
-// 根據路由參數獲取圖片資料
-const picture = computed(() => {
+const isLiked = ref(false)
+const isLiking = ref(false)
+const likeCount = ref(0)
+const picture = ref<DrawDocument | null>(null)
+
+// 獲取圖片數據
+const localpicture = computed(() => {
   return drawData[route.params.id as string]
 })
 
-// 導航到標籤搜尋結果
-const navigateToTag = (tag: string) => {
+onMounted(async () => {
+  try {
+    if (localpicture.value) {
+      picture.value = {
+        ...localpicture.value,
+        like: 0, // 初始化點讚數
+        id: route.params.id as string
+      } as DrawDocument
+      
+      // 從 Firestore 只獲取點讚數
+      const firestoreData = await getDocument<DrawDocument>('drawings', route.params.id as string)
+      if (firestoreData) {
+        likeCount.value = firestoreData.like
+      }
+    } else {
+      // 如果本地沒有，則從 Firestore 獲取完整數據
+      const firestoreData = await getDocument<DrawDocument>('drawings', route.params.id as string)
+      if (firestoreData) {
+        picture.value = firestoreData
+        likeCount.value = firestoreData.like
+      }
+    }
+  } catch (error) {
+    console.error('獲取圖片數據失敗:', error)
+  }
+})
+
+// 處理點讚
+async function handleLike() {
+  if (!picture.value || isLiking.value) return
+  
+  isLiking.value = true
+  try {
+    const newLikeCount = likeCount.value + 1
+    await updateDocument('drawings', picture.value.id, { like: newLikeCount })
+    likeCount.value = newLikeCount
+    isLiked.value = true
+  } catch (error) {
+    console.error('點讚失敗:', error)
+    alert('點讚失敗，請稍後再試')
+  } finally {
+    isLiking.value = false
+  }
+}
+
+// 處理標籤點擊
+function navigateToTag(tag: string) {
   router.push({
     path: '/draw',
     query: { search: tag }
   })
 }
-
-// 回報問題功能
-const reportIssue = () => {
-  alert('問題回報功能開發中...')
-}
-
-// 計算狀態樣式
-const statusClass = computed(() => {
-  return {
-    'status-text': true
-  }
-})
-
-// 管理喜歡狀態
-const isLiked = ref(false)
-
-// 切換喜歡狀態
-const toggleLike = () => {
-  const pictureId = route.params.id as string
-  if (pictureId && drawData[pictureId]) {
-    isLiked.value = !isLiked.value
-    drawData[pictureId].like += isLiked.value ? 1 : -1
-  }
-}
 </script>
 
 <style scoped>
+.detail {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
 .image-region {
   width: 100%;
   margin: 20px 0;
   display: flex;
   justify-content: center;
-  /* 讓圖片區域可以自由滾動 */
   overflow-y: auto;
 }
 
 .responsive-image {
-  width: 100%;
-  max-width: 66.67vw; /* viewport width 的 2/3 */
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 30px;
-  margin: 20px 0px;
-  align-items: start;
-  min-height: calc(100vh - 40px); /* 視窗高度減去上下margin */
-  position: relative;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.info-item strong {
-  min-width: 80px;
-  margin-right: 10px;
-}
-
-.status-title {
-  margin-bottom: 4px;
-}
-
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag {
-  background-color: #2c3e50;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.9em;
-}
-
-.status-region {
-  padding: 12px;
-  background-color: #d9d9db;
+.info-section {
+  padding: 20px;
+  background-color: #f5f5f5;
   border-radius: 8px;
-  flex-grow: 1;
-  height: 100%;
 }
 
 .header-section {
@@ -162,86 +179,66 @@ const toggleLike = () => {
 }
 
 .like-button {
-  background: none;
-  border: none;
-  font-size: 24px;
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 2px solid #ff4081;
+  border-radius: 20px;
+  color: #ff4081;
   cursor: pointer;
-  color: #e74c3c;
-  padding: 8px;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  min-width: 80px;
 }
 
-.like-button:hover {
-  transform: scale(1.1);
-}
-
-.info-section, .specs-section {
-  background-color: #ebedef;
-  padding: 10px 20px;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 80px); /* 視窗高度減去margin和padding */
-  position: sticky;
-  top: 20px;
-  overflow-y: auto;
-}
-
-.specs-section ul {
-  list-style: none;
-  padding: 0;
-}
-
-.specs-section li {
-  margin: 8px 0;
-}
-
-.status-available {
-  color: #27ae60;
-  font-weight: bold;
-}
-
-.status-maintenance {
-  color: #e74c3c;
-  font-weight: bold;
-}
-
-.status-borrowed {
-  color: #f39c12;
-  font-weight: bold;
-}
-
-.actions {
-  margin-top: 30px;
-}
-
-.actions button {
-  margin-right: 10px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.actions button:first-child {
-  background-color: #3498db;
+.like-button:hover:not(:disabled) {
+  background-color: #ff4081;
   color: white;
 }
 
-.actions button:last-child {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.actions button:disabled {
-  background-color: #bdc3c7;
+.like-button:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.like-icon {
+  margin-right: 4px;
+}
+
+.info-item {
+  margin-bottom: 15px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background-color: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.tag:hover {
+  background-color: #d0d0d0;
+}
+
+.status-region {
+  background-color: white;
+  padding: 15px;
+  border-radius: 4px;
+  margin-top: 10px;
 }
 
 .not-found {
   text-align: center;
   padding: 40px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+}
+
+.status-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
 }
 </style>
