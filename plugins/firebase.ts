@@ -19,7 +19,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     appId: config.public.firebase.appId
   }
 
-  console.log('Initializing Firebase with config:', {
+  // console.log('Initializing Firebase with config:', {
+  //   ...firebaseConfig,
+  //   apiKey: '[HIDDEN]'
+  // })
+
+  console.log('Firebase config loaded:', {
     ...firebaseConfig,
     apiKey: '[HIDDEN]'
   })
@@ -38,14 +43,19 @@ export default defineNuxtPlugin((nuxtApp) => {
   const auth = getAuth(app)
   console.log('Auth initialized successfully')
   // Nuxt plugin
+  // return {
+  //   provide: {
+  //     firebase: {
+  //       app,
+  //       db,
+  //       storage,
+  //       auth
+  //     }
+  //   }
+  // }
   return {
     provide: {
-      firebase: {
-        app,
-        db,
-        storage,
-        auth
-      }
+      firebase: { app, db, storage, auth }
     }
   }
 })
