@@ -33,15 +33,65 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { photoData } from '~/data/drawData'
+import { collection, getDocs } from 'firebase/firestore'
 
 const draw = Object.values(photoData).map(item => ({
   ...item,
   date: item.date.split('/').join('-')
 }))
 
+interface PhotoItem {
+  id: string;
+  path: string;
+  place: string[];
+  tags: string[];
+  date: string;
+  createdAt?: { seconds: number; nanoseconds: number };
+}
+
 const route = useRoute()
 const router = useRouter()
 const currentSearch = ref('')
+const firestorePhoto = ref<PhotoItem[]>([])
+
+const localphoto: PhotoItem[] = Object.values(photoData).map(item => ({
+  id: item.id,
+  path: item.path,
+  place: item.place,
+  tags: item.tags,
+  date: item.date.split('/').join('-'),
+  createdAt: undefined // explicitly set createdAt for local items
+}))
+
+const fetchFirestorePhoto = async () => {
+  try {
+    const { $firebase } = useNuxtApp()
+    const querySnapshot = await getDocs(collection($firebase.db, 'drawings'))
+    
+    const drawings = querySnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        path: data.path || '',
+        place: data.place || '',
+        tags: data.tags || [],
+        date: data.date || '',
+        createdAt: data.createdAt,
+        // isFirestore: true // 標記為 Firestore 圖片
+      } as PhotoItem
+    })
+
+    firestorePhoto.value = drawings
+    console.log('Firestore drawings loaded:', drawings)
+  } catch (error) {
+    console.error('Error fetching Firestore drawings:', error)
+  }
+}
+
+// 在組件掛載時獲取 Firestore 數據
+onMounted(() => {
+  fetchFirestorePhoto()
+})
 
 // 監視 URL 參數變化
 watch(() => route.query.search, (newSearch) => {
@@ -71,20 +121,35 @@ const navigateToDetail = (item: any): void => {
 
 // 過濾和排序圖片
 const filteredDraw = computed(() => {
-  let filtered = [...draw]
+  let allDrawings = [...localphoto]
+  if (firestorePhoto.value) {
+    allDrawings = [...allDrawings, ...firestorePhoto.value]
+  }
   
   if (currentSearch.value) {
     const query = currentSearch.value.toLowerCase()
-    filtered = filtered.filter(item => 
-      item.tags.some(tag => tag.toLowerCase().includes(query)) ||
-      item.place.some(place => place.toLowerCase().includes(query))
+    allDrawings = allDrawings.filter(item => 
+      item.tags?.some(tag => tag.toLowerCase().includes(query)) ||
+      item.place?.some(place => place.toLowerCase().includes(query)) // 修改這行，使用 some 來搜尋地點數組
     )
   }
     
-  return filtered.sort((a, b) => {
-    const dateA = new Date(a.date).getTime()
-    const dateB = new Date(b.date).getTime()
-    return dateB - dateA
+  return allDrawings.sort((a, b) => {
+    const dateA = a.date.split('/').join('-')
+    const dateB = b.date.split('/').join('-')
+
+    if (dateA !== dateB) {
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    }
+
+    const getDateTime = (item: PhotoItem) => {
+      if (item.createdAt) {
+        return new Date(item.createdAt.seconds * 1000 + item.createdAt.nanoseconds / 1000000).getTime()
+      }
+      return new Date(`${item.date.split('/').join('-')}T00:00:00`).getTime()
+    }
+
+    return getDateTime(b) - getDateTime(a)
   })
 })
 </script>

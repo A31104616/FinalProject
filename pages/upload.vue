@@ -136,7 +136,7 @@ const handleFileChange = (event: Event) => {
   }
 }
 
-const getCurrentDate = () => {
+const getCurrentDate = (): string => {
   const now = new Date()
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
@@ -165,21 +165,13 @@ const handleUpload = async () => {
     // 生成唯一ID
     const timestamp = Date.now()
     const random = Math.random().toString(36).substring(2, 15)
-    const id = `${timestamp}-${random}`
 
     // 準備檔案路徑
     const fileExt = selectedFile.value.name.split('.').pop() || 'png'
-    const fileName = `${id}.${fileExt}`
+    const fileName = `${timestamp}-${random}.${fileExt}`
     const storagePath = `${category.value}/${fileName}`
+    const currentDate = getCurrentDate()
 
-    // 準備元數據
-    // const currentDate = getCurrentDate()
-    // const baseMetadata = {
-    //   id,
-    //   date: currentDate,
-    //   createdAt: new Date(),
-    //   like: 0
-    // }
     const metadata = category.value === 'draw' 
       ? {
           name: drawForm.name,
@@ -188,7 +180,7 @@ const handleUpload = async () => {
           status: drawForm.status,
           tags: drawForm.tags.split(',').map(tag => tag.trim()).filter(Boolean),
           like: 0,
-          date: new Date().toISOString(),
+          date: currentDate,
           createdAt: new Date()
         }
       : {
@@ -197,7 +189,7 @@ const handleUpload = async () => {
           status: photoForm.status,
           place: photoForm.place.split(',').map(place => place.trim()).filter(Boolean),
           like: 0,
-          date: new Date().toISOString(),
+          date: currentDate,
           createdAt: new Date()
         }
 
@@ -214,9 +206,9 @@ const handleUpload = async () => {
     if (!result?.success) {
       throw new Error('上傳失敗')
     }
-
-    // 上傳成功，跳轉到作品頁面
-    router.push(`/${category.value}/${id}`)
+    
+    // 使用 Firestore 返回的文檔 ID 進行跳轉
+    router.push(`/${category.value}/${result.id}`)
   } catch (error: any) {
     console.error('上傳失敗:', error)
     alert(error.message || '上傳失敗，請稍後再試')

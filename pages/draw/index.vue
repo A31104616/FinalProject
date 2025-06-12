@@ -34,15 +34,61 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { drawData } from '~/data/drawData'
+import { collection, getDocs } from 'firebase/firestore'
 
-const draw = Object.values(drawData).map(item => ({
-  ...item,
-  date: item.date.split('/').join('-')
-}))
+interface DrawItem {
+  id: string;
+  path: string;
+  name: string;
+  tags: string[];
+  date: string;
+  createdAt?: { seconds: number; nanoseconds: number };
+}
 
 const route = useRoute()
 const router = useRouter()
 const currentSearch = ref('')
+const firestoreDrawings = ref<DrawItem[]>([])
+
+const localDraw: DrawItem[] = Object.values(drawData).map(item => ({
+  id: item.id,
+  path: item.path,
+  name: item.name,
+  tags: item.tags,
+  date: item.date.split('/').join('-'),
+  // isLocal: true,
+  createdAt: undefined // explicitly set createdAt for local items
+}))
+
+const fetchFirestoreDrawings = async () => {
+  try {
+    const { $firebase } = useNuxtApp()
+    const querySnapshot = await getDocs(collection($firebase.db, 'drawings'))
+    
+    const drawings = querySnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        path: data.path || '',
+        name: data.name || '',
+        tags: data.tags || [],
+        date: data.date || '',
+        createdAt: data.createdAt,
+        // isFirestore: true // 標記為 Firestore 圖片
+      } as DrawItem
+    })
+
+    firestoreDrawings.value = drawings
+    console.log('Firestore drawings loaded:', drawings)
+  } catch (error) {
+    console.error('Error fetching Firestore drawings:', error)
+  }
+}
+
+// 在組件掛載時獲取 Firestore 數據
+onMounted(() => {
+  fetchFirestoreDrawings()
+})
 
 // 監視 URL 參數變化
 watch(() => route.query.search, (newSearch) => {
@@ -72,20 +118,37 @@ const navigateToDetail = (item: any): void => {
 
 // 過濾和排序圖片
 const filteredDraw = computed(() => {
-  let filtered = [...draw]
+  // 合併本地和 Firestore 的圖片
+  // let allDrawings = [...localDraw, ...firestoreDrawings.value]
+  let allDrawings = [...localDraw]
+  if (firestoreDrawings.value) {
+    allDrawings = [...allDrawings, ...firestoreDrawings.value]
+  }
   
   if (currentSearch.value) {
     const query = currentSearch.value.toLowerCase()
-    filtered = filtered.filter(item => 
-      item.tags.some(tag => tag.toLowerCase().includes(query)) ||
-      item.name.toLowerCase().includes(query)
+    allDrawings = allDrawings.filter(item => 
+      item.tags?.some(tag => tag.toLowerCase().includes(query)) ||
+      item.name?.toLowerCase().includes(query)
     )
   }
     
-  return filtered.sort((a, b) => {
-    const dateA = new Date(a.date).getTime()
-    const dateB = new Date(b.date).getTime()
-    return dateB - dateA
+  return allDrawings.sort((a, b) => {
+    const dateA = a.date.split('/').join('-')
+    const dateB = b.date.split('/').join('-')
+
+    if (dateA !== dateB) {
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    }
+
+    const getDateTime = (item: DrawItem) => {
+      if (item.createdAt) {
+        return new Date(item.createdAt.seconds * 1000 + item.createdAt.nanoseconds / 1000000).getTime()
+      }
+      return new Date(`${item.date.split('/').join('-')}T00:00:00`).getTime()
+    }
+
+    return getDateTime(b) - getDateTime(a)
   })
 })
 </script>

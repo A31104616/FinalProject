@@ -53,13 +53,16 @@ export const useStorage = () => {
       await uploadBytes(fileRef, file)
       const downloadURL = await getDownloadURL(fileRef)
 
+      const now = new Date()
+      const formattedDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`
+
       // 保存數據到 Firestore
       const collectionRef = collection($firebase.db, collectionName)
       const docRef = await addDoc(collectionRef, {
         ...metadata,
         path: downloadURL,
         like: 0,
-        date: new Date().toISOString()
+        date: formattedDate // 使用格式化的日期字串
       })
 
       return {
