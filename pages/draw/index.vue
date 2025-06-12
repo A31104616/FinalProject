@@ -67,6 +67,7 @@ const fetchFirestoreDrawings = async () => {
     
     const drawings = querySnapshot.docs.map(doc => {
       const data = doc.data()
+      if (!data.createdAt) return null
       return {
         id: doc.id,
         path: data.path || '',
@@ -77,6 +78,7 @@ const fetchFirestoreDrawings = async () => {
         // isFirestore: true // 標記為 Firestore 圖片
       } as DrawItem
     })
+    .filter((item): item is DrawItem => item !== null) // 添加類型保護過濾器
 
     firestoreDrawings.value = drawings
     console.log('Firestore drawings loaded:', drawings)

@@ -70,6 +70,7 @@ const fetchFirestorePhoto = async () => {
     
     const drawings = querySnapshot.docs.map(doc => {
       const data = doc.data()
+      if (!data.createdAt) return null
       return {
         id: doc.id,
         path: data.path || '',
@@ -80,6 +81,7 @@ const fetchFirestorePhoto = async () => {
         // isFirestore: true // 標記為 Firestore 圖片
       } as PhotoItem
     })
+    .filter((item): item is PhotoItem => item !== null) // 添加類型保護過濾器
 
     firestorePhoto.value = drawings
     console.log('Firestore drawings loaded:', drawings)
