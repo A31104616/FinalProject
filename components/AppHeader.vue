@@ -232,6 +232,9 @@ const handleSearch = () => {
   .search-wrapper {
     max-width: 300px;
   }
+}
+
+@media (min-width: 577px) {
   .nav-links {
     display: flex !important;
     flex-direction: row;
