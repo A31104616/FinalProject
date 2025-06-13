@@ -1,12 +1,25 @@
 <template>
   <div>
     <div class="page-header">
-    <button v-if="currentSearch" @click="clearSearch" class="clear-button">
-      <span class="button-text">繪圖</span>
-    </button>
-    <h1>{{ displayTitle }}</h1>
+      <button v-if="currentSearch" @click="clearSearch" class="clear-button">
+        <span class="button-text">繪圖</span>
+      </button>
+      <h1>{{ displayTitle }}</h1>
+      <!-- 添加卡片大小選擇器 -->
+      <div class="size-selector">
+        <div class="size-button-group">
+          <button 
+            v-for="size in availableSizes" 
+            :key="size"
+            @click="cardSize = size"
+            :class="['size-button', { active: cardSize === size }]"
+          >
+            {{ getSizeLabel(size) }}
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="pic-list">
+    <div class="pic-list" :class="cardSize">
       <div 
         class="pic-card" 
         v-for="item in filteredDraw" 
@@ -49,6 +62,9 @@ const route = useRoute()
 const router = useRouter()
 const currentSearch = ref('')
 const firestoreDrawings = ref<DrawItem[]>([])
+// 添加卡片大小狀態
+const cardSize = ref('medium')
+const availableSizes = ref(['small', 'medium', 'large'])
 
 const localDraw: DrawItem[] = Object.values(drawData).map(item => ({
   id: item.id,
@@ -153,6 +169,42 @@ const filteredDraw = computed(() => {
     return getDateTime(b) - getDateTime(a)
   })
 })
+
+// 獲取大小標籤
+const getSizeLabel = (size: string) => {
+  const labels = {
+    small: '小',
+    medium: '中',
+    large: '大'
+  }
+  return labels[size as keyof typeof labels]
+}
+
+// 監聽視窗大小變化
+onMounted(() => {
+  // 初始化檢查
+  checkScreenSize()
+  // 監聽視窗大小變化
+  window.addEventListener('resize', checkScreenSize)
+})
+
+// 清理監聽器
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
+
+// 檢查螢幕大小並更新選項
+const checkScreenSize = () => {
+  if (window.innerWidth < 768) {
+    availableSizes.value = ['small', 'large']
+    // 如果當前選擇是 medium，自動切換到 small
+    if (cardSize.value === 'medium') {
+      cardSize.value = 'small'
+    }
+  } else {
+    availableSizes.value = ['small', 'medium', 'large']
+  }
+}
 </script>
 
 <style scoped>
@@ -189,11 +241,84 @@ const filteredDraw = computed(() => {
   background-color: #2980b9;
 }
 
+.size-selector {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.size-button-group {
+  display: flex;
+  background-color: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+  gap: 0;
+}
+
+.size-button {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+  font-size: 0.9em;
+  position: relative;
+}
+
+.size-button.active {
+  background-color: #3498db;
+  color: white;
+  border-radius: 6px;
+}
+
+.size-button:not(.active):hover {
+  color: #3498db;
+}
+
 .pic-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 10px;
   margin-top: 20px;
+}
+
+/* 修改卡片列表樣式 */
+.pic-list.small {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.pic-list.medium {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.pic-list.large {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+/* 調整不同大小卡片的圖片高度 */
+.pic-list.small .preview-image {
+  height: 150px;
+}
+
+.pic-list.medium .preview-image {
+  height: 250px;
+}
+
+.pic-list.large .preview-image {
+  height: 350px;
+}
+
+/* 調整不同大小卡片的最小高度 */
+.pic-list.small .pic-card {
+  min-height: 250px;
+}
+
+.pic-list.medium .pic-card {
+  min-height: 350px;
+}
+
+.pic-list.large .pic-card {
+  min-height: 450px;
 }
 
 .pic-card {
@@ -203,7 +328,7 @@ const filteredDraw = computed(() => {
   background-color: #f9f9f9;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  min-height: 350px;
+  /* min-height: 350px; */
   display: flex;
   flex-direction: column;
 }
@@ -252,5 +377,44 @@ const filteredDraw = computed(() => {
 .tag:hover {
   background-color: #27ae60;
   color: white;
+}
+@media (max-width: 480px) {
+  /* 修改卡片列表樣式 */
+  .pic-list.small {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .pic-list.medium {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .pic-list.large {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+
+  /* 調整不同大小卡片的圖片高度 */
+  .pic-list.small .preview-image {
+    height: 111px;
+  }
+
+  .pic-list.medium .preview-image {
+    height: 150px;
+  }
+
+  .pic-list.large .preview-image {
+    height: 300px;
+  }
+  /* 調整不同大小卡片的最小高度 */
+  .pic-list.small .pic-card {
+    min-height: 200px;
+  }
+
+  .pic-list.medium .pic-card {
+    min-height: 250px;
+  }
+
+  .pic-list.large .pic-card {
+    min-height: 450px;
+  }
 }
 </style>

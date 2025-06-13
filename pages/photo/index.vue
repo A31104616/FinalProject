@@ -1,11 +1,24 @@
 <template>
-  <div>    <div class="page-header">
+  <div>
+    <div class="page-header">
       <button v-if="currentSearch" @click="clearSearch" class="clear-button">
         <span class="button-text">攝影</span>
       </button>
       <h1>{{ displayTitle }}</h1>
+      <div class="size-selector">
+        <div class="size-button-group">
+          <button 
+            v-for="size in availableSizes" 
+            :key="size"
+            @click="cardSize = size"
+            :class="['size-button', { active: cardSize === size }]"
+          >
+            {{ getSizeLabel(size) }}
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="pic-list">
+    <div class="pic-list" :class="cardSize">
       <div 
         class="pic-card" 
         v-for="item in filteredDraw" 
@@ -30,10 +43,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { photoData } from '~/data/drawData'
 import { collection, getDocs } from 'firebase/firestore'
+
+// 添加卡片大小狀態
+const cardSize = ref<'small' | 'medium' | 'large'>('medium')
+const availableSizes = ref<Array<'small' | 'medium' | 'large'>>(['small', 'medium', 'large'])
 
 const draw = Object.values(photoData).map(item => ({
   ...item,
@@ -57,36 +74,34 @@ const firestorePhoto = ref<PhotoItem[]>([])
 const localphoto: PhotoItem[] = Object.values(photoData).map(item => ({
   id: item.id,
   path: item.path,
-  place: item.place,
+  place: Array.isArray(item.place) ? item.place : [item.place], // 確保 place 是數組
   tags: item.tags,
   date: item.date.split('/').join('-'),
-  createdAt: undefined // explicitly set createdAt for local items
+  createdAt: undefined
 }))
 
 const fetchFirestorePhoto = async () => {
   try {
     const { $firebase } = useNuxtApp()
-    const querySnapshot = await getDocs(collection($firebase.db, 'drawings'))
+    const querySnapshot = await getDocs(collection($firebase.db, 'photos'))
     
-    const drawings = querySnapshot.docs.map(doc => {
+    const photo = querySnapshot.docs.map(doc => {
       const data = doc.data()
       if (!data.createdAt) return null
       return {
         id: doc.id,
         path: data.path || '',
-        place: data.place || '',
+        place: Array.isArray(data.place) ? data.place : [data.place || ''], // 確保 place 是數組
         tags: data.tags || [],
         date: data.date || '',
         createdAt: data.createdAt,
-        // isFirestore: true // 標記為 Firestore 圖片
       } as PhotoItem
     })
-    .filter((item): item is PhotoItem => item !== null) // 添加類型保護過濾器
+    .filter((item): item is PhotoItem => item !== null)
 
-    firestorePhoto.value = drawings
-    console.log('Firestore drawings loaded:', drawings)
+    firestorePhoto.value = photo
   } catch (error) {
-    console.error('Error fetching Firestore drawings:', error)
+    console.error('Error fetching Firestore photo:', error)
   }
 }
 
@@ -154,6 +169,41 @@ const filteredDraw = computed(() => {
     return getDateTime(b) - getDateTime(a)
   })
 })
+
+// 獲取大小標籤
+const getSizeLabel = (size: string) => {
+  const labels :Record<string, string> = {
+    small: '小',
+    medium: '中',
+    large: '大'
+  }
+  return labels[size] || size
+}
+
+// 檢查螢幕大小並更新選項
+const checkScreenSize = () => {
+  if (window.innerWidth < 768) {
+    availableSizes.value = ['small', 'large']
+    if (cardSize.value === 'medium') {
+      cardSize.value = 'small'
+    }
+  } else {
+    availableSizes.value = ['small', 'medium', 'large']
+  }
+}
+
+// 監聽視窗大小變化
+onMounted(() => {
+  // 初始化檢查
+  checkScreenSize()
+  // 監聽視窗大小變化
+  window.addEventListener('resize', checkScreenSize)
+})
+
+// 清理監聽器
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
 </script>
 
 <style scoped>
@@ -190,11 +240,87 @@ const filteredDraw = computed(() => {
   background-color: #2980b9;
 }
 
+.size-selector {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.size-button-group {
+  display: flex;
+  background-color: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+  gap: 0;
+}
+
+.size-button {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+  font-size: 0.9em;
+  position: relative;
+  user-select: none; /* 防止文字被選中 */
+  outline: none;     /* 移除點擊時的外框 */
+}
+
+.size-button.active {
+  background-color: #3498db;
+  color: white;
+  border-radius: 6px;
+  pointer-events: auto; /* 確保可以點擊 */
+}
+
+.size-button:not(.active):hover {
+  color: #3498db;
+}
+
 .pic-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  gap: 10px;
   margin-top: 20px;
+}
+
+/* 修改卡片列表樣式 */
+.pic-list.small {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.pic-list.medium {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.pic-list.large {
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+}
+
+/* 調整不同大小卡片的圖片高度 */
+.pic-list.small .preview-image {
+  height: 150px;
+}
+
+.pic-list.medium .preview-image {
+  height: 250px;
+}
+
+.pic-list.large .preview-image {
+  height: 350px;
+}
+
+/* 調整不同大小卡片的最小高度 */
+.pic-list.small .pic-card {
+  min-height: 250px;
+}
+
+.pic-list.medium .pic-card {
+  min-height: 350px;
+}
+
+.pic-list.large .pic-card {
+  min-height: 450px;
 }
 
 .pic-card {
@@ -253,5 +379,45 @@ const filteredDraw = computed(() => {
 .tag:hover {
   background-color: #27ae60;
   color: white;
+}
+
+@media (max-width: 480px) {
+  /* 修改卡片列表樣式 */
+  .pic-list.small {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .pic-list.medium {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .pic-list.large {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+
+  /* 調整不同大小卡片的圖片高度 */
+  .pic-list.small .preview-image {
+    height: 111px;
+  }
+
+  .pic-list.medium .preview-image {
+    height: 150px;
+  }
+
+  .pic-list.large .preview-image {
+    height: 300px;
+  }
+  /* 調整不同大小卡片的最小高度 */
+  .pic-list.small .pic-card {
+    min-height: 200px;
+  }
+
+  .pic-list.medium .pic-card {
+    min-height: 250px;
+  }
+
+  .pic-list.large .pic-card {
+    min-height: 450px;
+  }
 }
 </style>

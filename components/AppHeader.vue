@@ -2,13 +2,19 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <div class="nav-links">
-        <NuxtLink to="/">首頁</NuxtLink>
-        <NuxtLink to="/draw">繪圖</NuxtLink>
-        <NuxtLink to="/photo">攝影</NuxtLink>
-        <NuxtLink to="/upload">上傳</NuxtLink>
+      <!-- 漢堡選單按鈕 -->
+      <button class="menu-toggle" @click="toggleMenu">
+        <i class="fas fa-bars"></i>
+      </button>
 
+      <!-- 導覽列 -->
+      <div class="nav-links" :class="{ 'nav-active': isMenuOpen }">
+        <NuxtLink to="/" @click="closeMenu">首頁</NuxtLink>
+        <NuxtLink to="/draw" @click="closeMenu">繪圖</NuxtLink>
+        <NuxtLink to="/photo" @click="closeMenu">攝影</NuxtLink>
+        <NuxtLink to="/upload" @click="closeMenu">上傳</NuxtLink>
       </div>
+
       <div class="search-wrapper">
         <div class="search-container">
           <div class="search-input-container">
@@ -40,7 +46,15 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const searchQuery = ref('')
 const selectedCategory = ref('draw')
+const isMenuOpen = ref(false)
 
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value
+}
+
+const closeMenu = () => {
+  isMenuOpen.value = false
+}
 const handleSearch = () => {
   if (!searchQuery.value.trim()) return
   
@@ -81,6 +95,16 @@ const handleSearch = () => {
 
 .nav-links a:hover {
   color: #6094b7;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px;
 }
 
 .search-wrapper {
@@ -153,5 +177,64 @@ const handleSearch = () => {
 /* 新增：整體容器懸停效果 */
 .search-input-container:hover {
   background-color: #405972;
+}
+
+@media (max-width: 576px) {
+  .menu-toggle {
+    display: block;
+  }
+
+  .nav {
+    position: relative;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 15px;
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    background-color: #2c3e50;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
+  .nav-links.nav-active {
+    display: flex;
+  }
+
+  .nav-links a {
+    padding: 15px 20px;
+    border-bottom: 1px solid #405972;
+  }
+
+  .nav-links a:last-child {
+    border-bottom: none;
+  }
+
+  .nav-links a:hover {
+    background-color: #3f566d;
+  }
+
+  .search-wrapper {
+    max-width: none;
+    width: auto;
+    margin-left: 10px;
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-wrapper {
+    max-width: 300px;
+  }
+  .nav-links {
+    display: flex !important;
+    flex-direction: row;
+  }
 }
 </style>

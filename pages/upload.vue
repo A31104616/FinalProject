@@ -367,4 +367,51 @@ const handleUpload = async () => {
   color: #666;
   font-size: 14px;
 }
+@media (max-width: 768px) {
+  .upload-form {
+    grid-template-columns: 1fr;  /* 改為單欄布局 */
+  }
+
+  .preview-section {
+    max-width: 100%;  /* 圖片預覽區域占滿寬度 */
+  }
+
+  .image-preview {
+    height: 250px;  /* 稍微降低預覽圖高度 */
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-container {
+    padding: 10px;  /* 縮小容器邊距 */
+  }
+
+  .category-btn {
+    width: 100%;  /* 按鈕占滿寬度 */
+    padding: 12px;  /* 增加按鈕高度，更容易點擊 */
+  }
+
+  .upload-form {
+    padding: 15px;  /* 縮小表單邊距 */
+    gap: 15px;
+  }
+
+  .image-preview {
+    height: 200px;  /* 進一步降低預覽圖高度 */
+  }
+
+  .form-field input,
+  .form-field textarea {
+    padding: 10px;  /* 增加輸入框高度，更容易輸入 */
+    width: 100%;
+    box-sizing: border-box;  /* 確保 padding 不會導致寬度溢出 */
+    max-width: 100%;
+  }
+
+  .upload-button {
+    width: 100%; 
+    padding: 15px;  /* 增加上傳按鈕高度 */
+    margin-top: 10px;
+  }
+}
 </style>

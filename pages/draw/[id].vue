@@ -203,6 +203,7 @@ function navigateToTag(tag: string) {
   padding: 20px;
   background-color: #f5f5f5;
   border-radius: 8px;
+  height: fit-content;
 }
 
 .header-section {

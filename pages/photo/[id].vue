@@ -7,7 +7,7 @@
           <img :src="picture.path" class="responsive-image">
         </div>
         <div class="info-section">
-          <div class="header-section">
+          <div class="like-button-container">
             <button 
               class="like-button" 
               @click="handleLike"
@@ -45,10 +45,12 @@
               >{{ tag }}</span>
             </span>
           </p>
-          <p class="info-item status-title"><strong>作品介紹 </strong></p>
-          <div class="status-region">
-            <span class="status-text">{{ picture.status }}</span>
-          </div>
+          <template v-if="picture.status && picture.status.trim()">
+            <p class="info-item status-title"><strong>作品介紹 </strong></p>
+            <div class="status-region">
+              <span class="status-text">{{ picture.status }}</span>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -213,16 +215,18 @@ function navigateToTag(tag: string) {
 }
 
 .info-section {
+  position: relative;
   padding: 20px;
   background-color: #f5f5f5;
   border-radius: 8px;
+  height: fit-content; /* 讓高度隨內容自適應 */
 }
 
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.like-button-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
 }
 
 .like-button {
