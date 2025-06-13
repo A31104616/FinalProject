@@ -183,7 +183,7 @@ const getSizeLabel = (size: string) => {
 // 檢查螢幕大小並更新選項
 const checkScreenSize = () => {
   if (window.innerWidth < 768) {
-    availableSizes.value = ['small', 'large']
+    availableSizes.value = ['small', 'medium']
     if (cardSize.value === 'medium') {
       cardSize.value = 'small'
     }

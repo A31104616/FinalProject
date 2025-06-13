@@ -196,7 +196,7 @@ onUnmounted(() => {
 // 檢查螢幕大小並更新選項
 const checkScreenSize = () => {
   if (window.innerWidth < 768) {
-    availableSizes.value = ['small', 'large']
+    availableSizes.value = ['small', 'medium']
     // 如果當前選擇是 medium，自動切換到 small
     if (cardSize.value === 'medium') {
       cardSize.value = 'small'
