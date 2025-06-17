@@ -2,9 +2,13 @@
   <div>
     <div class="page-header">
       <button v-if="currentSearch" @click="clearSearch" class="clear-button">
-        <span class="button-text">繪圖</span>
+        <h2>{{ displayTitle }}</h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
       </button>
-      <h1>{{ displayTitle }}</h1>
+      <h1 v-else>{{ displayTitle }}</h1>
       <!-- 添加卡片大小選擇器 -->
       <div class="size-selector">
         <div class="size-button-group">
@@ -209,9 +213,9 @@ const checkScreenSize = () => {
 
 <style scoped>
 .page-header {
+  padding: 1rem;
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
   gap: 20px;
 }
 
@@ -223,13 +227,19 @@ const checkScreenSize = () => {
 .clear-button {
   display: flex;
   align-items: center;
-  padding: 4px 12px;
-  border-radius: 4px;
-  background-color: #3498db;
-  color: white;
+  justify-content: space-between;
+  padding: 5px;
+  border-radius: 10px;
+  background-color: #f3f3f3;
+  color: rgb(103, 103, 103);
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
+}
+
+.clear-button h2 {
+  margin: 0.3rem;
+  font-size: 1.5em;
 }
 
 .button-text {
@@ -238,7 +248,8 @@ const checkScreenSize = () => {
 }
 
 .clear-button:hover {
-  background-color: #2980b9;
+  background-color: #ececec;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .size-selector {
@@ -279,7 +290,7 @@ const checkScreenSize = () => {
 .pic-list {
   display: grid;
   gap: 10px;
-  margin-top: 20px;
+  padding: 0.2rem 1.2rem;
 }
 
 /* 修改卡片列表樣式 */

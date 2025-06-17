@@ -6,6 +6,7 @@
       <slot />
     </main>
   </div>
+  <AppFooter />
 </template>
 
 <style scoped>
@@ -17,6 +18,5 @@
 
 .main-content {
   flex: 1;
-  padding: 20px;
 }
 </style>

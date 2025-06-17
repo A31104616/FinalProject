@@ -1,17 +1,16 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
+  <div class="container">
     <!-- 頁面標題 -->
-    <h1 class="text-4xl font-bold text-center mb-12 gradient-text">藝術作品展示</h1>
-
+    <h1>熱門主題展示</h1>
     <!-- 繪圖區塊 -->
     <section class="mb-16">
       <div class="section-header">
         <h2 class="text-3xl font-bold">
-          <span class="gradient-text-blue">熱門繪圖作品</span>
+          <span class="text">繪圖作品</span>
         </h2>
         <div class="tag-container">
           <span class="tag" @click="navigateToTag('draw', mostCommonDrawTag)">
-            #{{ mostCommonDrawTag }}
+            <h3>{{ mostCommonDrawTag }}</h3>
           </span>
         </div>
       </div>
@@ -50,16 +49,16 @@
       </button>
     </div>
     </section>
-
+    <div class="line"></div>
     <!-- 攝影區塊 -->
     <section class="mb-16">
       <div class="section-header">
         <h2 class="text-3xl font-bold">
-          <span class="gradient-text-green">熱門攝影作品</span>
+          <span class="text">攝影作品</span>
         </h2>
         <div class="tag-container">
           <span class="tag" @click="navigateToTag('photo', mostCommonphotoTag)">
-            #{{ mostCommonphotoTag }}
+            <h3>{{ mostCommonphotoTag }}</h3>
           </span>
         </div>
       </div>
@@ -247,25 +246,24 @@ const topPhotos = computed(() => {
 </script>
 
 <style scoped>
-/* 漸層文字效果 */
-.gradient-text {
-  background: linear-gradient(45deg, #2c3e50, #3498db);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.container {
+  margin: 0;
+  padding: 0.2rem 1rem;
 }
-
-.gradient-text-blue {
-  background: linear-gradient(45deg, #2980b9, #3498db);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.container h1{
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem;
 }
-
-.gradient-text-green {
-  background: linear-gradient(45deg, #27ae60, #2ecc71);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.container h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  padding-bottom: 0.5rem;
 }
-
 /* 標籤樣式 */
 .tag-container {
   display: flex;
@@ -281,6 +279,10 @@ const topPhotos = computed(() => {
   cursor: pointer;
   transition: all 0.3s ease;
 }
+.tag h3 {
+  margin: 0.2rem 0.4rem;
+  font-weight: 500;
+}
 
 .tag:hover {
   background: #e5e7eb;
@@ -290,7 +292,7 @@ const topPhotos = computed(() => {
 /* 卡片樣式優化 */
 .list-container {
   position: relative;
-  padding: 1rem 0;
+  padding: 0.2rem 0;
 }
 
 /* 修改列表樣式為橫向滾動 */
@@ -387,6 +389,9 @@ const topPhotos = computed(() => {
   font-weight: 600;
   color: #1a202c;
   margin: 0;
+}
+.line {
+  border-bottom: 2px solid #eee;
 }
 
 /* 響應式設計 */
