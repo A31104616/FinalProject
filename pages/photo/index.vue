@@ -188,9 +188,6 @@ const getSizeLabel = (size: string) => {
 const checkScreenSize = () => {
   if (window.innerWidth < 768) {
     availableSizes.value = ['small', 'medium']
-    if (cardSize.value === 'medium') {
-      cardSize.value = 'small'
-    }
   } else {
     availableSizes.value = ['small', 'medium', 'large']
   }
